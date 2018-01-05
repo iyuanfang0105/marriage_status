@@ -41,7 +41,7 @@ object Parent {
     import hiveContext.implicits._
     println("==================initSpark is OK===============")
 
-    // val today = "20170826"//调试用数据
+    //val today = "20171126"//调试用数据
     val today = args(0)
     val year: Int = today.substring(0,4).trim.toInt
     val month: Int = today.substring(4,6).trim.toInt
@@ -67,8 +67,8 @@ object Parent {
     })
 
     // (imei, appid)
-    val user_app: RDD[(String, String)] = get_app_user(hiveContext, source_feature_table_name, splitChar, yestoday_Date)
-    val parent_labeled_dataset: RDD[(String, Int)]= get_parent_label(user_age_from_flyme_table_name, user_app, parent_apps, hiveContext, yestoday_Date)
+    // val user_app: RDD[(String, String)] = get_app_user(hiveContext, source_feature_table_name, splitChar, yestoday_Date)
+    // val parent_labeled_dataset: RDD[(String, Int)]= get_parent_label(user_age_from_flyme_table_name, user_app, parent_apps, hiveContext, yestoday_Date)
     val parent_labeled_dataset_from_xxx_data: RDD[(String, Int)] = get_parent_label_from_xxx_data(xxx_child_table_name, hiveContext, yestoday_Date)
 
     val balance = false
@@ -77,30 +77,35 @@ object Parent {
     // println("\n\n ********************** MY MODEL ********************* \n\n")
     // report_model_performance(result_0._2)
 
+    println("\n\n ********************** XXX MODEL ********************* \n\n")
     val data_set_1 = get_data_set_for_build_model(parent_labeled_dataset_from_xxx_data, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
     val result_1 = build_model(data_set_1, 2)
-    println("\n\n ********************** XXX MODEL ********************* \n\n")
     report_model_performance(result_1._2)
 
-    // val result_1_all: RDD[(String, String)] = predict(result_1._1, data_set_1)
+    val result_1_all: RDD[(String, String)] = predict(result_1._1, data_set_1).cache()
+    val parent_count = result_1_all.filter(_._2 == "parent").count()
+    val non_parent_count = result_1_all.filter(_._2 == "non-parent").count()
+    println("\n\n********************** parent: " + parent_count + " ****************")
+    println("********************** non-parent: " + non_parent_count + " ****************\n\n")
+    println("********************** ratio parent/non-parent: " + parent_count*1.0 / non_parent_count + " ****************\n\n")
 
-    // val pre_df: DataFrame = result_1_all.repartition(300).map(v => Imei_parent(v._1, v._2)).toDF
+    val pre_df: DataFrame = result_1_all.repartition(300).map(v => Imei_parent(v._1, v._2)).toDF
 
-    // val create_predict_table_name: String = "algo.yf_parent_prediction_base_on_xxx_data"
-    // println("\n\n ********************* (Strarting)Insert result to yf table *********************\n\n ")
-    // pre_df.registerTempTable("prediction")
-    // hiveContext.sql(
-    //   "create table if not exists " +
-    //     create_predict_table_name +
-    //     " (imei string, parent string) partitioned by (stat_date string) stored as textfile")
+    val create_predict_table_name: String = "algo.yf_parent_prediction_base_on_xxx_data"
+    println("\n\n ********************* (Strarting)Insert result to yf table *********************\n\n ")
+    pre_df.registerTempTable("prediction")
+    hiveContext.sql(
+     "create table if not exists " +
+       create_predict_table_name +
+       " (imei string, parent string) partitioned by (stat_date string) stored as textfile")
 
-    // hiveContext.sql(
-    //   "insert overwrite table " +
-    //     create_predict_table_name +
-    //     " partition(stat_date = " +
-    //     yestoday_Date +
-    //     " ) select * from prediction")
-    // println("\n\n ********************* (Done)Insert result to yf table *********************\n\n ")
+    hiveContext.sql(
+     "insert overwrite table " +
+       create_predict_table_name +
+       " partition(stat_date = " +
+       yestoday_Date +
+       " ) select * from prediction")
+    println("\n\n ********************* (Done)Insert result to yf table *********************\n\n ")
 
     // parent_model_validation_with_age(hiveContext)
   }
@@ -114,11 +119,13 @@ object Parent {
 
     val rdd_temp: Array[RDD[(String, LabeledPoint)]] = trainSet.randomSplit(Array(0.8, 0.2))
     val train_rdd: RDD[(String, LabeledPoint)] = rdd_temp(0).cache()
-    println("********************* Data set number: " + train_rdd.count() + " *************************")
+    val valid_rdd: RDD[(String, LabeledPoint)] = rdd_temp(1).cache()
+    println("********************* train set number: " + train_rdd.count() + " *************************")
     println("********************* label_0 count: " + train_rdd.filter(_._2.label == 0).count() + " *******************")
     println("********************* label_1 count: " + train_rdd.filter(_._2.label == 1).count() + " ******************* \n\n")
-
-    val valid_rdd: RDD[(String, LabeledPoint)] = rdd_temp(1).cache()
+    println("********************* valid set number: " + valid_rdd.count() + " *************************")
+    println("********************* label_0 count: " + valid_rdd.filter(_._2.label == 0).count() + " *******************")
+    println("********************* label_1 count: " + valid_rdd.filter(_._2.label == 1).count() + " ******************* \n\n")
 
     val model: LogisticRegressionModel = new LogisticRegressionWithLBFGS().setNumClasses(classes_num).run(train_rdd.map(_._2))
     val valid_result: RDD[(String, (Double, Double))] = valid_rdd.map(v => (v._1, (model.predict(v._2.features), v._2.label)))
