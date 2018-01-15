@@ -51,16 +51,17 @@ object Marriage_Parent_Child {
     val feature_dim: Int = 30000
     val balance = false
     val user_behavoir_features_table_name: String = "algo.yf_user_behavior_features_app_install_on_30000_dims"
+    val questionnaire_table_name: String = "algo.yf_questionnaire_data"
 
-//    // marriage model based on questionnaire
-//    println("\n\n ************** marriage model based on questionnaire **************** \n\n")
-//    val marriage_class_num = 2
-//    val marriage_labeled_dataseet_from_questionnaire = get_marriage_label_from_questionnaire(hiveContext)
-//    val data_set_marriage_questionnaire = get_data_set_for_build_model(marriage_labeled_dataseet_from_questionnaire, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
-//    val result_marriage_questionnaire = build_model(data_set_marriage_questionnaire, marriage_class_num)
-//    val marriage_questionnaire_roc = ROC(result_marriage_questionnaire._2.map(_._2))
-//    println("\n\n*************** ROC_marriage_questionnaire_model: " + marriage_questionnaire_roc._1 + " ACCU_marriage_questionnaire_model: " + marriage_questionnaire_roc._2 + " **************\n\n")
-//
+    // marriage model based on questionnaire
+    println("\n\n ************** marriage model based on questionnaire **************** \n\n")
+    val marriage_class_num = 2
+    val marriage_labeled_dataseet_from_questionnaire = get_marriage_label_from_questionnaire(hiveContext, questionnaire_table_name)
+    val data_set_marriage_questionnaire = get_data_set_for_build_model(marriage_labeled_dataseet_from_questionnaire, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
+    val result_marriage_questionnaire = build_model(data_set_marriage_questionnaire, marriage_class_num)
+    val marriage_questionnaire_roc = ROC(result_marriage_questionnaire._2.map(_._2))
+    println("\n\n*************** ROC_marriage_questionnaire_model: " + marriage_questionnaire_roc._1 + " ACCU_marriage_questionnaire_model: " + marriage_questionnaire_roc._2 + " **************\n\n")
+
 //    // marriage model based on flyme age
 //    println("\n\n ************** marriage model based on flyme age **************** \n\n")
 //    val marriage_labeled_dataseet_from_flyme_age = get_marriage_label_from_flyme_age(hiveContext, yestoday_Date)
@@ -69,39 +70,38 @@ object Marriage_Parent_Child {
 //    val marriage_flyme_age_roc = ROC(result_marriage_flyme_age._2.map(_._2))
 //    println("\n\n*************** ROC_marriage_flyme_age_model: " + marriage_flyme_age_roc._1 + " ACCU_marriage_flyme_age_model: " + marriage_flyme_age_roc._2 + " **************\n\n")
 
-
     // parent model based on questionnaire data
     println("\n\n ************** parent model based on questionnaire data ****************")
     val parent_class_num = 2
-    val parent_labeled_dataset_from_questionnaire_data: RDD[(String, Int)] = get_parent_label_from_questionnaire(hiveContext)
+    val parent_labeled_dataset_from_questionnaire_data: RDD[(String, Int)] = get_parent_label_from_questionnaire(hiveContext, questionnaire_table_name)
     val data_set_parent_questionnaire = get_data_set_for_build_model(parent_labeled_dataset_from_questionnaire_data, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
     val result_parent_model_questionnaire = build_model(data_set_parent_questionnaire, parent_class_num)
     val parent_model_roc_questionnaire = ROC(result_parent_model_questionnaire._2.map(_._2))
     println("*************** ROC_parent_model_questionnaire: " + parent_model_roc_questionnaire._1 + " ACCU_parent_model_questionnaire: " + parent_model_roc_questionnaire._2 + " ***************\n\n")
 
-    // parent model based on xxx data
-    println("\n\n ************** parent model based on xxx data **************** \n\n")
-    val parent_labeled_dataset_from_xxx_data: RDD[(String, Int)] = get_parent_label_from_xxx_data(hiveContext)
-    val data_set_parent_xxx = get_data_set_for_build_model(parent_labeled_dataset_from_xxx_data, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
-    val result_parent_model_xxx = build_model(data_set_parent_xxx, parent_class_num)
-    val parent_model_roc = ROC(result_parent_model_xxx._2.map(_._2))
-    println("*************** ROC_parent_model_xxx: " + parent_model_roc._1 + " ACCU_parent_model_xxx: " + parent_model_roc._2 + " ***************")
-    val questionnaire_samples = data_set_parent_questionnaire._1.sample(false, 0.2, 1234L)
-    val result_questionnaire_samples = questionnaire_samples.map(v => (result_parent_model_xxx._1.predict(v._2.features), v._2.label))
-    val result_parent_model_xxx_evaluation_with_questionnaire_roc = ROC(result_questionnaire_samples)
-    println("*************** ROC_parent_model_xxx_evaluation_with_questionnaire_roc: " + result_parent_model_xxx_evaluation_with_questionnaire_roc._1 + " ACCU_parent_model_xxx_evaluation_with_questionnaire_roc: " + result_parent_model_xxx_evaluation_with_questionnaire_roc._2 + " ***************\n\n")
+//    // parent model based on xxx data
+//    println("\n\n ************** parent model based on xxx data **************** \n\n")
+//    val parent_labeled_dataset_from_xxx_data: RDD[(String, Int)] = get_parent_label_from_xxx_data(hiveContext)
+//    val data_set_parent_xxx = get_data_set_for_build_model(parent_labeled_dataset_from_xxx_data, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
+//    val result_parent_model_xxx = build_model(data_set_parent_xxx, parent_class_num)
+//    val parent_model_roc = ROC(result_parent_model_xxx._2.map(_._2))
+//    println("*************** ROC_parent_model_xxx: " + parent_model_roc._1 + " ACCU_parent_model_xxx: " + parent_model_roc._2 + " ***************")
+//    val questionnaire_samples = data_set_parent_questionnaire._1.sample(false, 0.2, 1234L)
+//    val result_questionnaire_samples = questionnaire_samples.map(v => (result_parent_model_xxx._1.predict(v._2.features), v._2.label))
+//    val result_parent_model_xxx_evaluation_with_questionnaire_roc = ROC(result_questionnaire_samples)
+//    println("*************** ROC_parent_model_xxx_evaluation_with_questionnaire_roc: " + result_parent_model_xxx_evaluation_with_questionnaire_roc._1 + " ACCU_parent_model_xxx_evaluation_with_questionnaire_roc: " + result_parent_model_xxx_evaluation_with_questionnaire_roc._2 + " ***************\n\n")
 
-    // child model based on questionnaire data
-    println("\n\n ************** child model based on questionnaire data ****************")
-    val child_class_num_questionnaire = 2
-    val child_labeled_dataset_from_questionnaire: RDD[(String, Int)] = get_child_stage_label_from_questionnaire(hiveContext, yestoday_Date)
-    val data_set_child_questionnaire = get_data_set_for_build_model(child_labeled_dataset_from_questionnaire, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
-    val result_child_model_questionnaire = build_model(data_set_child_questionnaire, child_class_num_questionnaire)
-    val child_model_confusion_matrix_questionnaire = confusion_matrix(result_child_model_questionnaire._2.map(_._2))
-    println("******************* Precision_child_model: " + child_model_confusion_matrix_questionnaire.precision + " Recall_child_model: " + child_model_confusion_matrix_questionnaire.recall + " ***************")
-    for(i <- 0 until child_class_num_questionnaire){
-      println("*************** Precision_" + i.toString + ": " + child_model_confusion_matrix_questionnaire.precision(i) + " Recall_" + i.toString +": " + child_model_confusion_matrix_questionnaire.recall(i)+ " ***************\n\n")
-    }
+//    // child model based on questionnaire data
+//    println("\n\n ************** child model based on questionnaire data ****************")
+//    val child_class_num_questionnaire = 2
+//    val child_labeled_dataset_from_questionnaire: RDD[(String, Int)] = get_child_stage_label_from_questionnaire(hiveContext, questionnaire_table_name)
+//    val data_set_child_questionnaire = get_data_set_for_build_model(child_labeled_dataset_from_questionnaire, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
+//    val result_child_model_questionnaire = build_model(data_set_child_questionnaire, child_class_num_questionnaire)
+//    val child_model_confusion_matrix_questionnaire = confusion_matrix(result_child_model_questionnaire._2.map(_._2))
+//    println("******************* Precision_child_model: " + child_model_confusion_matrix_questionnaire.precision + " Recall_child_model: " + child_model_confusion_matrix_questionnaire.recall + " ***************")
+//    for(i <- 0 until child_class_num_questionnaire){
+//      println("*************** Precision_" + i.toString + ": " + child_model_confusion_matrix_questionnaire.precision(i) + " Recall_" + i.toString +": " + child_model_confusion_matrix_questionnaire.recall(i)+ " ***************\n\n")
+//    }
 
     // child model based on xxx data
     println("\n\n ************** child model based on xxx data ****************")
@@ -114,6 +114,12 @@ object Marriage_Parent_Child {
     for(i <- 0 until child_class_num_xxx){
       println("*************** Precision_" + i.toString + ": " + child_model_confusion_matrix_xxx.precision(i) + " Recall_" + i.toString +": " + child_model_confusion_matrix_xxx.recall(i)+ " ***************")
     }
+//    val questionnaire_samples = data_set_child_questionnaire._1.sample(false, 0.2, 1234L)
+//    val result_questionnaire_samples = questionnaire_samples.map(v => (result_child_model_xxx._1.predict(v._2.features), v._2.label))
+//    val questionnaire_label_1 = result_questionnaire_samples.filter(_._2 == 0)
+//    val questionnaire_label_2 = result_questionnaire_samples.filter(_._2 == 1)
+//    val predict_correct_label_1 = questionnaire_label_1.filter(_._1 == 0)
+//    val predict_correct_label_2 = questionnaire_label_2.filter(_._1 == 2)
   }
 
   def get_marriage_label_from_flyme_age(hiveContext: HiveContext, yestoday_Date: String): RDD[(String, Int)] = {
@@ -137,8 +143,7 @@ object Marriage_Parent_Child {
     return user_marriage_label.map(v => (v._1, v._2-1))
   }
 
-  def get_marriage_label_from_questionnaire(hiveContext: HiveContext): RDD[(String, Int)] = {
-    val questionnaire_table_name: String = "algo.yf_questionnaire_data"
+  def get_marriage_label_from_questionnaire(hiveContext: HiveContext, questionnaire_table_name: String): RDD[(String, Int)] = {
     val select_sql: String = "SELECT imei, q4 from " + questionnaire_table_name + " where q4==\"A\" OR q4==\"B\" OR q4==\"C\" OR q4==\"D\""
     val user_marriage_label_raw = hiveContext.sql(select_sql).rdd.map(v => (v(0).toString, v(1).toString))
     val user_marriage_label_raw_summary = user_marriage_label_raw.map(v => (v._2, v._1)).groupByKey().map(v => (v._1, v._2.size))
@@ -169,8 +174,8 @@ object Marriage_Parent_Child {
     return xxx_parent_data_rdd
   }
 
-  def get_parent_label_from_questionnaire(hiveContext: HiveContext): RDD[(String, Int)] = {
-    val questionnaire_select_sql: String = "SELECT imei, Q7 from algo.yf_questionnaire_data_new where Q7!=\"\""
+  def get_parent_label_from_questionnaire(hiveContext: HiveContext, questionnaire_table_name: String): RDD[(String, Int)] = {
+    val questionnaire_select_sql: String = "SELECT imei, Q7 from " + questionnaire_table_name + " where Q7!=\"\""
     val questionnaire_df = hiveContext.sql(questionnaire_select_sql)
     val questionnaire_refined = questionnaire_df.rdd.filter(v => v(1).toString.length == 1).map(v => (v(0).toString, v(1).toString))
     val questionnaire_count = questionnaire_df.count()
@@ -207,8 +212,8 @@ object Marriage_Parent_Child {
     return questionnaire_refined_label.filter(_._2 !=0).filter(_._2 != 3).map(v => (v._1, v._2-1))
   }
 
-  def get_child_stage_label_from_questionnaire(hiveContext: HiveContext, yestoday_Date: String): RDD[(String, Int)] = {
-    val questionnaire_select_sql: String = "SELECT imei, Q7 from (SELECT t_a.flymeid, t_a.Q7 from (SELECT flymeid, get_json_object(content,'$.0') as Q1, get_json_object(content,'$.1') as Q2, get_json_object(content,'$.2') as Q3, get_json_object(content,'$.3') as Q4, get_json_object(content,'$.4') as Q5, get_json_object(content,'$.5') as Q6, get_json_object(content,'$.6') as Q7, get_json_object(content,'$.7') as Q8, get_json_object(content,'$.8') as Q9, get_json_object(content,'$.9') as Q10, get_json_object(content,'$.10') as Q11, get_json_object(content,'$.11') as Q12, source, posttime, stat_date FROM ext_metis.ods_questionnaire) as t_a where t_a.Q1!=\"\" and t_a.Q2!=\"\"and t_a.Q3!=\"\" and t_a.Q4!=\"\"and t_a.Q5!=\"\" and t_a.Q6!=\"\" and t_a.Q7!=\"\"and t_a.Q8!=\"\" and t_a.Q9!=\"\"and t_a.Q10!=\"\" and t_a.Q11!=\"\" and t_a.Q12!=\"\") as t_b join (SELECT imei,uid from  user_profile.edl_device_uid_mz_rel where stat_date=" + yestoday_Date + ") as t_c where t_b.flymeid=t_c.uid"
+  def get_child_stage_label_from_questionnaire(hiveContext: HiveContext, questionnaire_table_name: String): RDD[(String, Int)] = {
+    val questionnaire_select_sql: String = "SELECT imei, Q7 from " + questionnaire_table_name + " where Q7!=\"\""
     val questionnaire_df = hiveContext.sql(questionnaire_select_sql)
     val questionnaire_refined = questionnaire_df.rdd.filter(v => v(1).toString.length == 1).map(v => (v(0).toString, v(1).toString))
     val questionnaire_count = questionnaire_df.count()
@@ -401,10 +406,10 @@ object Marriage_Parent_Child {
     return multiclass_metrics
   }
 
-  def parent_data_invalidation_with_questionnaire_and_xxx(hiveContext: HiveContext) = {
+  def parent_data_invalidation_with_questionnaire_and_xxx(hiveContext: HiveContext, questionnaire_table_name: String) = {
     // parent data invalidation
     val parent_xxx = get_parent_label_from_xxx_data(hiveContext)
-    val parent_questionnaire = get_parent_label_from_questionnaire(hiveContext)
+    val parent_questionnaire = get_parent_label_from_questionnaire(hiveContext, questionnaire_table_name)
     val parent_imei_matched = parent_xxx.join(parent_questionnaire)
     val parent_imei_and_label_matched = parent_imei_matched.filter(v => (v._2._1 == v._2._2))
     val parent_imei_and_label_conflicted = parent_imei_matched.filter(v => (v._2._1 != v._2._2))
