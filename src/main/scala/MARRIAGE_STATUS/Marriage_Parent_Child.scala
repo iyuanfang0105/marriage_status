@@ -10,8 +10,7 @@ import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.sql.SparkSession
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -21,24 +20,26 @@ object Marriage_Parent_Child {
 
   def main(args: Array[String]): Unit = {
     //--- Initialization
-    val sparkConf: SparkConf = new SparkConf()
-    val sc: SparkContext = new SparkContext(sparkConf)
-    System.setProperty("user.name", "mzsip")
-    System.setProperty("HADOOP_USER_NAME", "mzsip")
-    sparkConf.setAppName("YF_ALGO_MARRIAGE_PARENT_CHILD_MODEL") //application name
-    //---
-    sc.hadoopConfiguration.set("mapred.output.compress", "false")
+//    System.setProperty("user.name", "mzsip")
+//    System.setProperty("HADOOP_USER_NAME", "mzsip")
 
-    Logger.getLogger("org").setLevel(Level.ERROR)
+    // Logger.getLogger("org").setLevel(Level.ERROR)
     Logger.getLogger("org.apache.spark").setLevel(Level.ERROR)
-    Logger.getLogger("akka").setLevel(Level.ERROR)
-    Logger.getRootLogger().setLevel(Level.ERROR)
+    // Logger.getLogger("akka").setLevel(Level.ERROR)
+    // Logger.getRootLogger.setLevel(Level.ERROR)
+    val sparkSession = SparkSession.builder().appName("YF_ALGO_MARRIAGE_PARENT_CHILD_MODEL").enableHiveSupport().getOrCreate()
+    sparkSession.sparkContext.setLogLevel("ERROR")
+    //    sc.hadoopConfiguration.set("mapred.output.compress", "false")
+    //    val sparkConf: SparkConf = new SparkConf()
+    //    val sc: SparkContext = new SparkContext(sparkConf)
+    //    sparkConf.setAppName("YF_ALGO_MARRIAGE_PARENT_CHILD_MODEL") //application name
 
-    val hiveContext: HiveContext = new HiveContext(sc)
-    hiveContext.setConf("mapred.output.compress", "false")
-    hiveContext.setConf("hive.exec.compress.output", "false")
-    hiveContext.setConf("mapreduce.output.fileoutputformat.compress", "false")
-    import hiveContext.implicits._
+
+    //    val hiveContext: HiveContext = new HiveContext(sc)
+    //    hiveContext.setConf("mapred.output.compress", "false")
+    //    hiveContext.setConf("hive.exec.compress.output", "false")
+    //    hiveContext.setConf("mapreduce.output.fileoutputformat.compress", "false")
+    //    import hiveContext.implicits._
 
     val today = "20171225"
     //调试用数据
@@ -60,8 +61,8 @@ object Marriage_Parent_Child {
     // marriage model based on questionnaire
     println("\n\n ************** marriage model based on questionnaire **************** \n\n")
     val marriage_class_num = 2
-    val marriage_labeled_dataseet_from_questionnaire = get_marriage_label_from_questionnaire(hiveContext, questionnaire_table_name)
-    val data_set_marriage_questionnaire = get_data_set_for_build_model(marriage_labeled_dataseet_from_questionnaire, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
+    val marriage_labeled_dataseet_from_questionnaire = get_marriage_label_from_questionnaire(sparkSession, questionnaire_table_name)
+    val data_set_marriage_questionnaire = get_data_set_for_build_model(marriage_labeled_dataseet_from_questionnaire, user_behavoir_features_table_name, feature_dim, balance, sparkSession, yestoday_Date)
     val result_marriage_questionnaire = build_model(data_set_marriage_questionnaire, marriage_class_num)
     val marriage_questionnaire_roc = ROC(result_marriage_questionnaire._2.map(_._2))
     println("\n\n*************** ROC_marriage_questionnaire_model: " + marriage_questionnaire_roc._1 + " ACCU_marriage_questionnaire_model: " + marriage_questionnaire_roc._2 + " **************\n\n")
@@ -70,8 +71,8 @@ object Marriage_Parent_Child {
     // parent model based on questionnaire data
     println("\n\n ************** parent model based on questionnaire data ****************")
     val parent_class_num = 2
-    val parent_labeled_dataset_from_questionnaire_data: RDD[(String, Int)] = get_parent_label_from_questionnaire(hiveContext, questionnaire_table_name)
-    val data_set_parent_questionnaire = get_data_set_for_build_model(parent_labeled_dataset_from_questionnaire_data, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
+    val parent_labeled_dataset_from_questionnaire_data: RDD[(String, Int)] = get_parent_label_from_questionnaire(sparkSession, questionnaire_table_name)
+    val data_set_parent_questionnaire = get_data_set_for_build_model(parent_labeled_dataset_from_questionnaire_data, user_behavoir_features_table_name, feature_dim, balance, sparkSession, yestoday_Date)
     val result_parent_model_questionnaire = build_model(data_set_parent_questionnaire, parent_class_num)
     val parent_model_roc_questionnaire = ROC(result_parent_model_questionnaire._2.map(_._2))
     println("*************** ROC_parent_model_questionnaire: " + parent_model_roc_questionnaire._1 + " ACCU_parent_model_questionnaire: " + parent_model_roc_questionnaire._2 + " ***************\n\n")
@@ -80,11 +81,12 @@ object Marriage_Parent_Child {
     // child model based on xxx data
     println("\n\n ************** child model based on xxx data ****************")
     val child_class_num_xxx = 3
-    val child_labeled_dataset_from_xxx: RDD[(String, Int)] = get_child_stage_label_from_xxx_data(hiveContext, yestoday_Date)
-    val data_set_child_xxx = get_data_set_for_build_model(child_labeled_dataset_from_xxx, user_behavoir_features_table_name, feature_dim, balance, hiveContext, yestoday_Date)
+    val child_labeled_dataset_from_xxx: RDD[(String, Int)] = get_child_stage_label_from_xxx_data(sparkSession, yestoday_Date)
+    val data_set_child_xxx = get_data_set_for_build_model(child_labeled_dataset_from_xxx, user_behavoir_features_table_name, feature_dim, balance, sparkSession, yestoday_Date)
     val result_child_model_xxx = build_model(data_set_child_xxx, child_class_num_xxx)
     val child_model_confusion_matrix_xxx = confusion_matrix(result_child_model_xxx._2.map(_._2))
-    println("******************* Precision_child_model: " + child_model_confusion_matrix_xxx.precision + " Recall_child_model: " + child_model_confusion_matrix_xxx.recall + " ***************")
+    // println("******************* Precision_child_model: " + child_model_confusion_matrix_xxx.precision + " Recall_child_model: " + child_model_confusion_matrix_xxx.recall + " ***************")
+    println("******************** Overall accuracy: " + child_model_confusion_matrix_xxx.accuracy)
     for(i <- 0 until child_class_num_xxx){
       println("*************** Precision_" + i.toString + ": " + child_model_confusion_matrix_xxx.precision(i) + " Recall_" + i.toString +": " + child_model_confusion_matrix_xxx.recall(i)+ " ***************")
     }
@@ -92,16 +94,16 @@ object Marriage_Parent_Child {
 
     // merged result and insert to db
     val merged_pred = merge_predictions(pred_marraige, pred_parent, pred_child_stage)
-    save_to_db(hiveContext, merged_pred, predictions_table_name, yestoday_Date)
+    save_to_db(sparkSession, merged_pred, predictions_table_name, yestoday_Date)
   }
 
-  def get_marriage_label_from_flyme_age(hiveContext: HiveContext, yestoday_Date: String): RDD[(String, Int)] = {
+  def get_marriage_label_from_flyme_age(sparkSession: SparkSession, yestoday_Date: String): RDD[(String, Int)] = {
     // val select_latest_date_sql = "SELECT stat_date from " + user_age_from_flyme_table_name + " GROUP by stat_date ORDER by stat_date DESC"
     // val latest_date: String = hiveContext.sql(select_latest_date_sql).first()(0).toString
     // println("\n\n ***************** The latest date of user_age_from_flyme: " + latest_date + " ************* \n\n")
     val user_age_from_flyme_table_name: String = "algo.yf_user_age_collect_from_flyme"
     val select_user_age_sql: String = "select * from " + user_age_from_flyme_table_name + " where stat_date=" + yestoday_Date
-    val user_marriage_label: RDD[(String, Int)] = hiveContext.sql(select_user_age_sql).rdd.map(v => {
+    val user_marriage_label: RDD[(String, Int)] = sparkSession.sql(select_user_age_sql).rdd.map(v => {
       val imei: String = v(0).toString
       val age: Int = v(2).toString.toInt
       var label: Int = 0
@@ -116,9 +118,9 @@ object Marriage_Parent_Child {
     return user_marriage_label.map(v => (v._1, v._2-1))
   }
 
-  def get_marriage_label_from_questionnaire(hiveContext: HiveContext, questionnaire_table_name: String): RDD[(String, Int)] = {
+  def get_marriage_label_from_questionnaire(sparkSession: SparkSession, questionnaire_table_name: String): RDD[(String, Int)] = {
     val select_sql: String = "SELECT imei, q4 from " + questionnaire_table_name + " where q4==\"A\" OR q4==\"B\" OR q4==\"C\" OR q4==\"D\""
-    val user_marriage_label_raw = hiveContext.sql(select_sql).rdd.map(v => (v(0).toString, v(1).toString))
+    val user_marriage_label_raw = sparkSession.sql(select_sql).rdd.map(v => (v(0).toString, v(1).toString))
     val user_marriage_label_raw_summary = user_marriage_label_raw.map(v => (v._2, v._1)).groupByKey().map(v => (v._1, v._2.size))
     println()
     user_marriage_label_raw_summary.collect().foreach(v => println(v._1 + " " + v._2.toString))
@@ -138,18 +140,18 @@ object Marriage_Parent_Child {
     return user_marriage_label.map(v => (v._1, v._2-1))
   }
 
-  def get_parent_label_from_xxx_data(hiveContext: HiveContext): RDD[(String, Int)] = {
+  def get_parent_label_from_xxx_data(sparkSession: SparkSession): RDD[(String, Int)] = {
     val xxx_parent_table_name: String = "user_profile.xxx_md5_child"
     val xxx_parent_data_select_sql: String = "select * from " + xxx_parent_table_name + " t_a left join user_profile.xxx_md5 t_b on lower(t_a.imeimd5)=lower(t_b.imeimd5) where t_b.imei is not null"
-    val xxx_parent_data_df: DataFrame = hiveContext.sql(xxx_parent_data_select_sql).select("imei", "child")
+    val xxx_parent_data_df: DataFrame = sparkSession.sql(xxx_parent_data_select_sql).select("imei", "child")
     val xxx_parent_data_rdd: RDD[(String, Int)] = xxx_parent_data_df.rdd.map(v => (v.get(0).toString, v.get(1).toString.toInt)).reduceByKey((a, b) => a)
     print("\n\n************* The number of xxx_parent_data: " + xxx_parent_data_rdd.count() + " ****************** \n\n")
     return xxx_parent_data_rdd
   }
 
-  def get_parent_label_from_questionnaire(hiveContext: HiveContext, questionnaire_table_name: String): RDD[(String, Int)] = {
+  def get_parent_label_from_questionnaire(sparkSession: SparkSession, questionnaire_table_name: String): RDD[(String, Int)] = {
     val questionnaire_select_sql: String = "SELECT imei, Q7 from " + questionnaire_table_name + " where Q7!=\"\""
-    val questionnaire_df = hiveContext.sql(questionnaire_select_sql)
+    val questionnaire_df = sparkSession.sql(questionnaire_select_sql)
     val questionnaire_refined = questionnaire_df.rdd.filter(v => v(1).toString.length == 1).map(v => (v(0).toString, v(1).toString))
     val questionnaire_count = questionnaire_df.count()
     val questionnaire_refined_count = questionnaire_refined.count()
@@ -185,9 +187,9 @@ object Marriage_Parent_Child {
     return questionnaire_refined_label.map(v => (v._1, v._2-1))
   }
 
-  def get_child_stage_label_from_questionnaire(hiveContext: HiveContext, questionnaire_table_name: String): RDD[(String, Int)] = {
+  def get_child_stage_label_from_questionnaire(sparkSession: SparkSession, questionnaire_table_name: String): RDD[(String, Int)] = {
     val questionnaire_select_sql: String = "SELECT imei, Q7 from " + questionnaire_table_name + " where Q7!=\"\""
-    val questionnaire_df = hiveContext.sql(questionnaire_select_sql)
+    val questionnaire_df = sparkSession.sql(questionnaire_select_sql)
     val questionnaire_refined = questionnaire_df.rdd.filter(v => v(1).toString.length == 1).map(v => (v(0).toString, v(1).toString))
     val questionnaire_count = questionnaire_df.count()
     val questionnaire_refined_count = questionnaire_refined.count()
@@ -243,9 +245,9 @@ object Marriage_Parent_Child {
     return questionnaire_refined_label.filter(_._2 !=0).filter(_._2 != 7).filter(_._2 != 8).map(v => (v._1, v._2-1)).reduceByKey((a, b) => a)
   }
 
-  def get_child_stage_label_from_xxx_data(hiveContext: HiveContext, yestoday_Date: String): RDD[(String, Int)] = {
+  def get_child_stage_label_from_xxx_data(sparkSession: SparkSession, yestoday_Date: String): RDD[(String, Int)] = {
     val xxx_child_stage_sql: String = "select imei, child_stage from algo.yf_xxx_labels where child_stage=\"婴幼儿\" or child_stage=\"孕育期\" or child_stage=\"青少年\""
-    val xxx_child_stage_labeled_data = hiveContext.sql(xxx_child_stage_sql).rdd.map(v => {
+    val xxx_child_stage_labeled_data = sparkSession.sql(xxx_child_stage_sql).rdd.map(v => {
       var label: Int = 0
       if(v(1).toString == "婴幼儿")
         label = 1
@@ -281,7 +283,7 @@ object Marriage_Parent_Child {
                                    user_behavoir_features_table_name: String,
                                    feature_dim: Int,
                                    balance: Boolean,
-                                   hiveContext: HiveContext,
+                                   sparkSession: SparkSession,
                                    yestoday_Date: String): (RDD[(String, LabeledPoint)], RDD[(String, LabeledPoint)]) = {
     // get  latest date of user behavior features
     // val select_latest_date_sql = "show PARTITIONS " + user_behavoir_features_table_name
@@ -290,7 +292,7 @@ object Marriage_Parent_Child {
     println("***************** The date of user behavior: " + yestoday_Date + " *************")
     // user behavior features
     val select_imei_feature_sql: String = "select * from " + user_behavoir_features_table_name + " where stat_date=" + yestoday_Date
-    val imei_feature_rdd: RDD[(String, String)] = hiveContext.sql(select_imei_feature_sql).rdd.map(v => (v(0).toString, v(1).toString))
+    val imei_feature_rdd: RDD[(String, String)] = sparkSession.sql(select_imei_feature_sql).rdd.map(v => (v(0).toString, v(1).toString))
     println("********************* The number of user hehavior features data: " + imei_feature_rdd.count() + " ***********************")
     println("********************* The number of labeled_dataset: " + labeled_dataset.count() + " ***********************")
     // building the train and predict set
@@ -432,10 +434,10 @@ object Marriage_Parent_Child {
     return multiclass_metrics
   }
 
-  def parent_data_invalidation_with_questionnaire_and_xxx(hiveContext: HiveContext, questionnaire_table_name: String): Unit = {
+  def parent_data_invalidation_with_questionnaire_and_xxx(sparkSession: SparkSession, questionnaire_table_name: String): Unit = {
     // parent data invalidation
-    val parent_xxx = get_parent_label_from_xxx_data(hiveContext)
-    val parent_questionnaire = get_parent_label_from_questionnaire(hiveContext, questionnaire_table_name)
+    val parent_xxx = get_parent_label_from_xxx_data(sparkSession)
+    val parent_questionnaire = get_parent_label_from_questionnaire(sparkSession, questionnaire_table_name)
     val parent_imei_matched = parent_xxx.join(parent_questionnaire)
     val parent_imei_and_label_matched = parent_imei_matched.filter(v => (v._2._1 == v._2._2))
     val parent_imei_and_label_conflicted = parent_imei_matched.filter(v => (v._2._1 != v._2._2))
@@ -476,15 +478,15 @@ object Marriage_Parent_Child {
     return merged_pred_refined_1
   }
 
-  def save_to_db(hiveContext: HiveContext, pred: RDD[(String, String, String, String)], table_name: String, yestoday_Date: String): Unit = {
-    import hiveContext.implicits._
+  def save_to_db(sparkSession: SparkSession, pred: RDD[(String, String, String, String)], table_name: String, yestoday_Date: String): Unit = {
+    import sparkSession.implicits._
     val pred_df: DataFrame = pred.map(v => Imei_MPC(v._1, v._2, v._3, v._4)).toDF
     println("\n\n ********************* (Strarting)Insert result to yf table *********************")
-    pred_df.registerTempTable("prediction")
+    pred_df.createOrReplaceGlobalTempView("prediction")
     val create_sql: String = "create table if not exists " + table_name + " (imei string, marriage string, parent string, child_stage string) partitioned by (stat_date string) stored as textfile"
     val insert_sql: String = "insert overwrite table " + table_name + " partition(stat_date=" + yestoday_Date + " ) select * from prediction"
-    hiveContext.sql(create_sql)
-    hiveContext.sql(insert_sql)
+    sparkSession.sql(create_sql)
+    sparkSession.sql(insert_sql)
     println("********************* (Done)Insert result to yf table *********************\n\n ")
   }
 }
