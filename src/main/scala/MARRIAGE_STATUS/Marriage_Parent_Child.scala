@@ -29,10 +29,11 @@ object Marriage_Parent_Child {
     //---
     sc.hadoopConfiguration.set("mapred.output.compress", "false")
 
+    Logger.getRootLogger.setLevel(Level.ERROR)
     Logger.getLogger("org").setLevel(Level.ERROR)
     Logger.getLogger("org.apache.spark").setLevel(Level.ERROR)
     Logger.getLogger("akka").setLevel(Level.ERROR)
-    Logger.getRootLogger().setLevel(Level.ERROR)
+
 
     val hiveContext: HiveContext = new HiveContext(sc)
     hiveContext.setConf("mapred.output.compress", "false")
@@ -40,9 +41,9 @@ object Marriage_Parent_Child {
     hiveContext.setConf("mapreduce.output.fileoutputformat.compress", "false")
     import hiveContext.implicits._
 
-    val today = "20171225"
+    // val today = "20171225"
     //调试用数据
-    // val today = args(0)
+    val today = args(0)
     val year: Int = today.substring(0, 4).trim.toInt
     val month: Int = today.substring(4, 6).trim.toInt
     val day: Int = today.substring(6, 8).trim.toInt
@@ -122,7 +123,6 @@ object Marriage_Parent_Child {
     val user_marriage_label_raw_summary = user_marriage_label_raw.map(v => (v._2, v._1)).groupByKey().map(v => (v._1, v._2.size))
     println()
     user_marriage_label_raw_summary.collect().foreach(v => println(v._1 + " " + v._2.toString))
-
     val user_marriage_label: RDD[(String, Int)] = user_marriage_label_raw.map(v => {
       var label: Int = 0
       if (v._2 == "A")
@@ -463,15 +463,29 @@ object Marriage_Parent_Child {
       val m = v._2
       var p = v._3
       var c = v._4
-      if (v._2 == "unmarried" && v._3 == "parent")
+      if (v._2 == "unmarried" && v._3 == "parent"){
         p = "non_parent"
+        c = "null"
+      }
       if (v._3 == "non_parent")
         c = "null"
       (imei, m, p, c)
     })
+
     merged_pred_refined_1.map(v => (v._2, v._1)).groupByKey().map(v => (v._1, v._2.size)).collect().foreach(v => println(v._1 + " " + v._2.toString))
+    println()
     merged_pred_refined_1.map(v => (v._3, v._1)).groupByKey().map(v => (v._1, v._2.size)).collect().foreach(v => println(v._1 + " " + v._2.toString))
+    println()
     merged_pred_refined_1.map(v => (v._4, v._1)).groupByKey().map(v => (v._1, v._2.size)).collect().foreach(v => println(v._1 + " " + v._2.toString))
+    println()
+
+    val marriage_labels = Array("married", "unmarried")
+    val parent_labels = Array("parent", "non_parent")
+    val child_stage_labels = Array("baby", "teen", "pregnant", "null")
+    for(i <- 0 to 1)
+      for(j <- 0 to 1)
+        for(k <- 0 to 3)
+          println("********* " + marriage_labels(i) + " && " + parent_labels(j) + " && " + child_stage_labels(k) + "      " + merged_pred_refined_1.filter(_._2 == marriage_labels(i)).filter(_._3 == parent_labels(j)).filter(_._4 == child_stage_labels(k)).count())
 
     return merged_pred_refined_1
   }
